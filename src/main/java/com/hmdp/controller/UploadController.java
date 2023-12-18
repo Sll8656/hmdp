@@ -57,7 +57,6 @@ public class UploadController {
         if (!dir.exists()) {
             dir.mkdirs();
         }
-        int a;
         // 生成文件名
         return StrUtil.format("/blogs/{}/{}/{}.{}", d1, d2, name, suffix);
 
