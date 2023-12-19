@@ -27,6 +27,7 @@ public class ShopTypeController {
 
     @GetMapping("list")
     public Result queryTypeList() {
+         System.out.println("这是我在yuancheng 的修改");
         System.out.println("这是我在本地的修改");
         System.out.println("这是我在本地的修改2");
         return typeService.queryShopType();
