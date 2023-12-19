@@ -27,6 +27,8 @@ public class ShopTypeController {
 
     @GetMapping("list")
     public Result queryTypeList() {
+        int a = 10;
+        System.out.println("这是我在本地的修改");
         return typeService.queryShopType();
     }
 }
