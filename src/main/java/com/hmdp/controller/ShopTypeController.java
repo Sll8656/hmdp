@@ -27,6 +27,7 @@ public class ShopTypeController {
 
     @GetMapping("list")
     public Result queryTypeList() {
+        System.out.println("这是我在远程仓库的修改");
         return typeService.queryShopType();
     }
 }
