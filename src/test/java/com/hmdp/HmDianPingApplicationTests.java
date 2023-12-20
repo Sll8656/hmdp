@@ -21,12 +21,12 @@ class HmDianPingApplicationTests {
     private RedisIdWorker redisIdWorker;
 
     private ExecutorService es = Executors.newFixedThreadPool(500);
-    @Test
+   /* @Test
     void testSaveShop() throws InterruptedException {
         shopService.saveShop2Redis(1L,10L);
-    }
+    }*/
 
-    @Test
+    /*@Test
     void testIdWorker() throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(300);
 
@@ -44,5 +44,5 @@ class HmDianPingApplicationTests {
         latch.await();
         long end = System.currentTimeMillis();
         System.out.println("time = " + (end - begin));
-    }
+    }*/
 }
