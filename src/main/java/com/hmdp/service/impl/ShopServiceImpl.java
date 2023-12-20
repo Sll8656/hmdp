@@ -91,7 +91,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             if(shop == null) { //解决缓存穿透
                 log.info("数据库中不存在!");
                 //将redis和数据库中都不存在的存入Redis中
-                stringRedisTemplate.opsForValue().set(key, "", 30L,TimeUnit.MINUTES);
+                stringRedisTemplate.opsForValue().set(key, "", 2L,TimeUnit.MINUTES);
                 return null;
             }
             log.info("数据库中存在!");
@@ -140,12 +140,14 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             Shop shop = JSONUtil.toBean(shopJson,Shop.class);
             return shop;
         }
-        //看命中的是否是空值，如果==null，说明不存在，！=null，说明存在，并且他的值是 ""。所以不等于的时候要排除
+        //shopJson三种情况：1.null 2.有值 3.""。上面的逻辑走下来，只剩下情况1和3。
         if(shopJson != null) {
+            // != null 说明shopJson == ""。shopJson一开始肯定是null,所以才会执行数据库，数据库将无效key写入Redis，shopJson才!=null
+            // shopJson == ""的前提是数据库将""写入了Redis。所以以后每次打入""，都会被Redis从这里拦截住。
             return null;
         }
 
-        //不存在: 根据id查询数据库
+        //根据id查询数据库
         Shop shop = shopMapper.selectById(id);
 
         //不存在
