@@ -2781,18 +2781,11 @@ public Result likeBlog(Long id){
     return Result.ok();
 }
 
-private void isBlogLiked(Blog blog) {
-    // 1.获取登录用户
-    UserDTO user = UserHolder.getUser();
-    if (user == null) {
-        // 用户未登录，无需查询是否点赞
-        return;
-    }
-    Long userId = user.getId();
-    // 2.判断当前登录用户是否已经点赞
-    String key = "blog:liked:" + blog.getId();
-    Double score = stringRedisTemplate.opsForZSet().score(key, userId.toString());
-    blog.setIsLike(score != null);
+private void isBlogLiked(Blog blog) { //使用无序集合的方式
+    Long userId = UserHolder.getUser().getId(); //从ThreadLocal中拿到用户id
+    String key = "blog:liked:" + blog.getId(); //组成Redis中的key
+    Boolean isMember = stringRedisTemplate.opsForSet().isMember(key, userId.toString()); //看看在不在Redis中
+    blog.setIsLike(BooleanUtil.isTrue(isMember)); //如果在就设置为True，不在就设置为false。
 }
 ```
 
@@ -2819,8 +2812,6 @@ BlogServiceImpl
 点赞逻辑代码
 
 ```java
-
-
 @Override
 public Result likeBlog(Long id) {
     // 1.获取登录用户
@@ -2847,9 +2838,17 @@ public Result likeBlog(Long id) {
     }
     return Result.ok();
 }
-
-
-
+private void isBlogLiked(Blog blog) {
+    UserDTO user = UserHolder.getUser();        // 1.获取登录用户
+    if (user == null) {           // 用户未登录，无需查询是否点赞
+        return;
+    }
+    Long userId = user.getId();
+    // 2.判断当前登录用户是否已经点赞
+    String key = BLOG_LIKED_KEY + blog.getId();
+    Double score = stringRedisTemplate.opsForZSet().score(key, userId.toString());
+    blog.setIsLike(score != null);
+}
 ```
 
 点赞列表查询列表
@@ -2875,19 +2874,39 @@ public Result queryBlogLikes(Long id) {
     if (top5 == null || top5.isEmpty()) {
         return Result.ok(Collections.emptyList());
     }
-    // 2.解析出其中的用户id
-    List<Long> ids = top5.stream().map(Long::valueOf).collect(Collectors.toList());
-    String idStr = StrUtil.join(",", ids);
-    // 3.根据用户id查询用户 WHERE id IN ( 5 , 1 ) ORDER BY FIELD(id, 5, 1)
-    List<UserDTO> userDTOS = userService.query()
-            .in("id", ids).last("ORDER BY FIELD(id," + idStr + ")").list()
-            .stream()
-            .map(user -> BeanUtil.copyProperties(user, UserDTO.class))
-            .collect(Collectors.toList());
+    //解析出其中的用户id
+    List<Long> ids = top5.stream()
+        .map(Long::valueOf)
+        .collect(Collectors.toList());
+    //根据用户id查询用户
+    List<UserDTO> userDTOS = userService.listByIds(ids)
+        .stream()
+        .map(user -> BeanUtil.copyProperties(user, UserDTO.class))
+        .collect(Collectors.toList());
     // 4.返回
     return Result.ok(userDTOS);
 }
 ```
+
+有一个小bug，就是点赞顺序不对劲
+
+出错的地方在MySQL中：
+
+![image-20231223173111120](./assets/image-20231223173111120.png)
+
+加了FIELD才是先5再1，不加FIELD，就是先1后5了
+
+**所以解决方法就是用到了数据库中的Order By Field功能**
+
+```java
+String idStr = StrUtil.join(",", ids); //解析出其中的用户id
+//根据用户id查询用户 where id in (5, 1) order by field (id ,5 , 1)
+List<UserDTO> userDTOS = userService.query()
+    .in("id",ids).last("ORDER BY FIELD(id, " + idStr + ")").list()
+
+```
+
+
 
 ## 9、好友关注
 
